@@ -1,15 +1,15 @@
 /**
- * POC test for ALMighty REST API - goal is to create/delete NNN workitems daily and track 
+ * POC test for ALMighty REST API - goal is to create/delete NNN workitems daily and track
  * the throughput to track trends over time
  * See: http://frisbyjs.com/
  * @author ldimaggi, pbhat
- * 
+ *
  * Prerequisites:
  * npm install --save-dev frisby
  * npm install -g jasmine-node
- * 
+ *
  * Run by: jasmine-node <script name>
- * 
+ *
  * TODO - Generate login token during test ("bin/alm-cli generate login -H demo.almighty.io")
  */
 
@@ -20,7 +20,7 @@ var frisby = require("frisby");
 var url = "http://localhost:8080/api/";
 
 /* frisby.globalSetup is used by all REST requests */
-frisby.globalSetup({ 
+frisby.globalSetup({
   request: {
     headers: { 'Content-Type': 'application/json',
                'Accept': 'application/json',
@@ -54,7 +54,7 @@ var test3 = frisby.create('Should be successful in creating new workitems')
   // test3.inspectBody();
 
   test3.expectJSONTypes({
-    id: String,    
+    id: String,
     type: String,
     version: Number
   });
@@ -70,5 +70,39 @@ test3.toss();
 
 }
 
+/*Test with Empty title Expecting 400 bad request*/
+var emptyTitle = frisby.create('Test with Empty title Expecting 400 bad request')
 
+  emptyTitle.post(url + 'workitems', {"type": "system.bug", "fields": { "system.title":"", "system.owner": "tjones", "system.state": "new", "system.creator":"nv" }},{ json: true })
+  emptyTitle.expectHeaderContains('Content-Type', 'application/vnd.workitem+json');
 
+  emptyTitle.expectStatus(400);
+  // test3.inspectBody();
+emptyTitle.toss();
+
+/*Test with Create a Workitem with type "system.feature"*/
+var types = ["system.feature","system.bug","system.userstory","system.fundamental","system.experience","system.valueproposition"]
+var typesList=types.length;
+
+for (var i=0;i<typesList;i++){
+  console.log(types[i]);
+  var typeFeature = frisby.create('Test with Create a Workitem with '+types[i])
+  console.log('"'+types[i]+'"');
+  typeFeature.post(url + 'workitems', {"type": types[i], "fields": { "system.title":"Creating issue type "+types[i], "system.owner": "tjones", "system.state": "new", "system.creator":"nv" }},{ json: true })
+  typeFeature.expectHeaderContains('Content-Type', 'application/vnd.workitem+json');
+  console.log("DEBUG :: Test with Create a Workitem with type system.feature");
+  typeFeature.expectStatus(201);
+  typeFeature.expectJSONTypes({
+    id: String,
+    type: String,
+    version: Number
+  });
+typeFeature.toss();
+}
+
+var typeFeatureInvalid = frisby.create('Test with Create a Workitem with  invalid')
+typeFeatureInvalid.post(url + 'workitems', {"type":"system.type", "fields": { "system.title":"Creating issue invalidtype ", "system.owner": "tjones", "system.state": "new", "system.creator":"nv" }},{ json: true })
+typeFeatureInvalid.expectHeaderContains('Content-Type', 'application/vnd.goa.error');
+console.log("DEBUG ::Test with Create a Workitem with  invalid");
+//typeFeatureInvalid.expectStatus(400);
+typeFeatureInvalid.toss();
